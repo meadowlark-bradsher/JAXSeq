@@ -10,7 +10,7 @@ frozendict==2.3.4
 transformers==4.26.1
 six==1.16.0
 pyyaml==6.0
-sentencepiece==0.1.96
+sentencepiece==0.2.0
 redis==4.3.4
 termcolor==1.1.0
 google-cloud-storage==2.5.0
