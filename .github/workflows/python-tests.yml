@@ -27,4 +27,4 @@ jobs:
 
     - name: Run tests with coverage
       run: |
-        pytest --cov=my_module tests/
+        pytest --cov=JaxSeq tests/
