@@ -51,12 +51,13 @@ def dump_state(
             sharding=get_sharding_from_model(model, train_state.params), 
         )
 
+
 def eval_loss(
-    inference: Inference, 
-    dataset: Union[Seq2SeqDataset, Seq2SeqIterableDataset], 
-    prng_key: Optional[KeyArray], 
-    bsize: int, 
-    eval_batches: Optional[int], 
+        inference: Inference,
+        dataset: Union[Seq2SeqDataset, Seq2SeqIterableDataset],
+        prng_key: Optional[KeyArray],
+        bsize: int,
+        eval_batches: Optional[int],
 ) -> Dict[str, Any]:
     # setup evaluator loop state
     eval_logs = []
@@ -64,6 +65,13 @@ def eval_loss(
     # eval on batches
     prng_key, new_prng = jax.random.split(prng_key) if prng_key is not None else (None, None)
     d = dataloader(new_prng, dataset, bsize, truncate=True)
+    print("Starting eval loop...")
+    count = 0
+    for i, batch in tqdm(enumerate(d)):
+        count += 1
+        _, info = inference.eval_loss(**batch)
+        eval_logs.append(info)
+    print("Total eval batches:", count)
     for i, batch in tqdm(enumerate(d)):
         # conditionally terminate early
         if eval_batches is not None and i >= eval_batches:
@@ -72,7 +80,7 @@ def eval_loss(
         # get eval logs
         _, info = inference.eval_loss(**batch)
         eval_logs.append(info)
-    
+
     # gather and postproc eval logs
     eval_logs = pull_logs(combine_logs(eval_logs))
     return eval_logs

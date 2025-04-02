@@ -286,8 +286,14 @@ class MaskIterableDataset(IterableDataset):
                     pad_value=None if truncate else 0.0, 
                     initial_buffer=buffer_start_mask, 
                 )
-
+                seg_count=0
+                seg_count_additive = 1
                 for in_tokens, in_training_mask in zip(in_tokens_stream, in_training_mask_stream):
+                    seg_count += seg_count_additive
+                    if seg_count % 10 == 0:
+                        print(f"[_tokens_generator] process segments #{seg_count} (eval or train?).")
+                        seg_count = 1
+                        seg_count_additive = 0
                     if buffer_start_str is None:
                         in_training_mask[0] = 0.0 # always mask the first token
                     yield in_tokens, in_training_mask
