@@ -74,7 +74,13 @@ def combine_logs(
     initial_log: Optional[PyTree]=None, 
     **device_get_kwargs, 
 ) -> PyTree:
-    logs = jax.tree_util.tree_map(lambda x: multihost_device_get(x, **device_get_kwargs), logs)
+    print("combine_logs: logs length before device_get:", len(logs))
+    logs = jax.tree_util.tree_map(
+        lambda x: multihost_device_get(x, **device_get_kwargs),
+        logs
+    )
+    print("combine_logs: logs length after device_get:", len(logs))
+
     tree_def = jax.tree_util.tree_structure(logs[0], is_leaf=_is_leaf)
     flat_logs = list(zip(*[jax.tree_util.tree_flatten(log, is_leaf=_is_leaf)[0] for log in logs]))
     if initial_log is None:
