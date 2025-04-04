@@ -31,6 +31,8 @@ def dump_state(
 ):  
     # dump model config
     with open(get_enabled_save_path(os.path.join(save_dir, 'config.json'), enabled=enable_save), 'w') as f:
+        print("dumping model config:\n")
+        print(model.config.to_json_string())
         f.write(model.config.to_json_string())
     # dump loop_state
     with open(get_enabled_save_path(os.path.join(save_dir, 'loop_state.pkl'), enabled=enable_save), 'wb') as f:

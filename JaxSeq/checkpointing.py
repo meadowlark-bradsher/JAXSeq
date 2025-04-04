@@ -25,6 +25,7 @@ def save_pytree(
     dtype: jnp.dtype=None, 
     sharding: Optional[PyTree]=None, 
 ) -> None:
+    print("Checkpointing: saving pytree to {}".format(path))
     if sharding is not None:
         sharding = flax.traverse_util.flatten_dict(flax.serialization.to_state_dict(sharding), keep_empty_nodes=True)
 
