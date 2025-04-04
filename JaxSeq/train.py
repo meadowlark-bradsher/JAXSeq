@@ -66,8 +66,6 @@ def eval_loss(
     prng_key, new_prng = jax.random.split(prng_key) if prng_key is not None else (None, None)
     d2 = dataloader(new_prng, dataset, bsize, truncate=True)
     print("Starting eval loop...")
-    print("eval batches value: {}".format(eval_batches))
-    print("eval dataset size: {}".format(len(d2)))
     count = 0
     for i, batch in tqdm(enumerate(d2)):
         # If eval_batches != None, we stop after `eval_batches` batches
