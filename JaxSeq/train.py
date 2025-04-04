@@ -72,7 +72,10 @@ def eval_loss(
         _, info = inference.eval_loss(**batch)
         eval_logs.append(info)
     print("Total eval batches:", count)
-    for i, batch in tqdm(enumerate(d)):
+
+    d2 = dataloader(new_prng, dataset, bsize, truncate=True)
+
+    for i, batch in tqdm(enumerate(d2)):
         # conditionally terminate early
         if eval_batches is not None and i >= eval_batches:
             break
