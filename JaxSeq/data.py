@@ -302,3 +302,51 @@ class MaskIterableDataset(IterableDataset):
                 return self._tokens_generator()
 
         return cls(_TokensIterable())
+class MaskListDataset(Dataset):
+    """
+    A sized dataset wrapper around a list of (token_ids, mask) pairs.
+    """
+    def __init__(self, pairs_list):
+        # pairs_list is a list of tuples: [(in_tokens, in_training_mask), ...]
+        self.pairs_list = pairs_list
+
+    def __len__(self):
+        return len(self.pairs_list)
+
+    def __getitem__(self, idx):
+        return self.pairs_list[idx]
+
+
+def build_sized_mask_dataset(str_segments_iterable, tokenizer, blocking_strategy):
+    """
+    1) Stream your existing data (the same way MaskIterableDataset would).
+    2) Collect everything into a list.
+    3) Return a MaskListDataset.
+    """
+    all_pairs = []
+    for segments in str_segments_iterable:
+        # Tokenize/encode the segments (this is similar to your .blocked_from_str_segments_iterable)
+        in_tokens = []
+        in_training_mask = []
+        for (text, mask_value) in segments:
+            token_ids = tokenizer.encode(text)
+            in_tokens.extend(token_ids)
+            in_training_mask.extend([mask_value]*len(token_ids))
+
+        # Then block/pad
+        in_tokens = block_sequences(
+            [in_tokens],
+            pad_value=tokenizer.pad_token_id,
+            dtype=np.int32,
+            blocking_strategy=blocking_strategy
+        )[0]
+        in_training_mask = block_sequences(
+            [in_training_mask],
+            pad_value=0.0,
+            dtype=np.float32,
+            blocking_strategy=blocking_strategy
+        )[0]
+
+        all_pairs.append((in_tokens, in_training_mask))
+
+    return MaskListDataset(all_pairs)
