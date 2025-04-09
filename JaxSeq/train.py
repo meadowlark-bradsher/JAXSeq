@@ -148,7 +148,7 @@ def train_loop(
     saved_checkpoints = loop_state.get('saved_checkpoints', deque([]))
     step = 0
     steps_per_epoch = len(dataset) // bsize if isinstance(dataset, Dataset) else None
-    print(f"{'steps_per_epoch': {steps_per_epoch}}")
+    print('Steps per epoch: ', steps_per_epoch)
     if 'steps_per_epoch' in loop_state:
         assert steps_per_epoch == loop_state['steps_per_epoch'], 'loop_state steps_per_epoch does not match dataset steps_per_epoch'
     epoch = -1
