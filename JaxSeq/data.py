@@ -308,7 +308,8 @@ class MaskListDataset(Dataset):
     """
     def __init__(self, pairs_list):
         # pairs_list is a list of tuples: [(in_tokens, in_training_mask), ...]
-        self.pairs_list = pairs_list
+        # If you need to store arbitrary objects, use dtype=object
+        self.pairs_list = np.array(pairs_list, dtype=object)
 
     def __len__(self):
         return len(self.pairs_list)
