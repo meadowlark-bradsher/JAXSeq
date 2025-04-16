@@ -159,6 +159,11 @@ def shard_train_state_from_checkpoint(
     sharding = get_sharding_from_model(model, train_state_shape)
     assert sharding is not None
 
+    print(f"checkpoint_path from {checkpoint_path}")
+    print(f"train_state_shape from {train_state_shape}")
+    print(f"train_state_dtype from {train_state_dtype}")
+    print(f"Sharding from {sharding}")
+
     # load train_state
     with jax.default_device(jax.devices('cpu')[0]):
         train_state = load_pytree(
