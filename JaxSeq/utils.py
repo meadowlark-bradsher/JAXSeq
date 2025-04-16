@@ -516,3 +516,19 @@ def get_gradient_checkpoint_policy(name):
         'checkpoint_dots': jax.checkpoint_policies.checkpoint_dots,
         'checkpoint_dots_with_no_batch_dims': jax.checkpoint_policies.checkpoint_dots_with_no_batch_dims,
     }[name]
+
+def file_exists(path: str) -> bool:
+    """
+    Return True if the file exists, whether `path` is local or a GCS URI like `gs://bucket/...`.
+    Return False if it doesn't exist.
+    """
+    try:
+        with open(path, 'rb') as f:
+            # read 1 byte or none, just to confirm existence
+            f.read(1)
+        return True
+    except FileNotFoundError:
+        return False
+    except OSError:
+        # you might catch a broader exception if needed
+        return False

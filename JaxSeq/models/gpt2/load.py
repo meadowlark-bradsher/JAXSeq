@@ -8,7 +8,7 @@ import jax
 import jax.numpy as jnp
 from JaxSeq.models.gpt2.model import FlaxGPT2LMHeadModel
 from JaxSeq.models.gpt2.config import GPT2Config
-from JaxSeq.utils import match_partition_rules, inplace_float_to_dtype
+from JaxSeq.utils import match_partition_rules, inplace_float_to_dtype, file_exists
 import os
 import optax
 from flax.training.train_state import TrainState
@@ -154,7 +154,7 @@ def load_train_state(
         train_state_path = os.path.join(model_load_path, 'train_state.msgpack')
 
         config_path = os.path.join(model_load_path, 'config.json')
-        if not os.path.exists(config_path):
+        if not file_exists(config_path):
             raise FileNotFoundError(f"Could not find config.json in {model_load_path}.")
         with open(config_path, 'r') as f:
             model_config = GPT2Config.from_dict(json.load(f))
@@ -163,14 +163,14 @@ def load_train_state(
         model.config.mesh = mesh
 
         # Decide how to load
-        if os.path.exists(params_path):
+        if file_exists(params_path):
             # A) Load from 'params.msgpack'
             params = shard_params_from_checkpoint(
                 model,
                 params_path,
                 params_dtype=params_dtype
             )
-        elif os.path.exists(train_state_path):
+        elif file_exists(train_state_path):
             # B) Fallback: 'train_state.msgpack' => just load "params"
             print(f"Warning: 'params.msgpack' not found in {model_load_path}; "
                   f"falling back to 'train_state.msgpack' (params only).")
