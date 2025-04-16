@@ -81,6 +81,7 @@ def load_train_state(
 ) -> Tuple[TrainState, FlaxGPT2LMHeadModel]:
     
     if ModelLoadMode.match_load_mode(model_load_mode, ModelLoadMode.HF):
+        print("Using ModelLoadMode.HF")
         # load model
         with jax.default_device(jax.devices('cpu')[0]):
             model, params = FlaxGPT2LMHeadModel.from_pretrained(model_load_path, _do_init=False, dtype=model_dtype)
@@ -99,6 +100,7 @@ def load_train_state(
         params = shard_params_from_params(model, params)
         train_state = shard_train_state_from_params(model, params, optim_getter(params))
     elif ModelLoadMode.match_load_mode(model_load_mode, ModelLoadMode.CONFIG):
+        print("Using ModelLoadMode.CONFIG")
         # load config
         assert prng_key is not None, 'Must provide prng_key when loading from config.'
         with open(model_load_path, 'r') as f:
@@ -114,6 +116,7 @@ def load_train_state(
             params_dtype=params_dtype, 
         )
     elif ModelLoadMode.match_load_mode(model_load_mode, ModelLoadMode.TRAIN_STATE):
+        print("Using ModelLoadMode.TRAIN_STATE")
         # load model
         with open(os.path.join(model_load_path, 'config.json'), 'r') as f:
             model_config = GPT2Config.from_dict(json.load(f))
@@ -130,6 +133,7 @@ def load_train_state(
             params = freeze(pad_embeddings(unfreeze(params), model, tokenizer, dtype=params_dtype))
             train_state = shard_train_state_from_params(model, params, optim_getter(params))
     elif ModelLoadMode.match_load_mode(model_load_mode, ModelLoadMode.TRAIN_STATE_PARAMS):
+        print("Using ModelLoadMode.TRAIN_STATE_PARAMS")
         # load model
         with open(os.path.join(model_load_path, 'config.json'), 'r') as f:
             model_config = GPT2Config.from_dict(json.load(f))
@@ -144,19 +148,56 @@ def load_train_state(
         # shard train_state
         train_state = shard_train_state_from_params(model, params, optim_getter(params))
     elif ModelLoadMode.match_load_mode(model_load_mode, ModelLoadMode.PARAMS):
-        # load model
-        with open(os.path.join(model_load_path, 'config.json'), 'r') as f:
+        print("Using ModelLoadMode.PARAMS")
+
+        params_path = os.path.join(model_load_path, 'params.msgpack')
+        train_state_path = os.path.join(model_load_path, 'train_state.msgpack')
+
+        config_path = os.path.join(model_load_path, 'config.json')
+        if not os.path.exists(config_path):
+            raise FileNotFoundError(f"Could not find config.json in {model_load_path}.")
+        with open(config_path, 'r') as f:
             model_config = GPT2Config.from_dict(json.load(f))
+
         model = FlaxGPT2LMHeadModel(model_config, dtype=model_dtype, _do_init=False)
         model.config.mesh = mesh
-        # load params, shard params
-        params = shard_params_from_checkpoint(model, os.path.join(model_load_path, 'params.msgpack'), params_dtype=params_dtype)
-        # pad embeddings
+
+        # Decide how to load
+        if os.path.exists(params_path):
+            # A) Load from 'params.msgpack'
+            params = shard_params_from_checkpoint(
+                model,
+                params_path,
+                params_dtype=params_dtype
+            )
+        elif os.path.exists(train_state_path):
+            # B) Fallback: 'train_state.msgpack' => just load "params"
+            print(f"Warning: 'params.msgpack' not found in {model_load_path}; "
+                  f"falling back to 'train_state.msgpack' (params only).")
+            params = shard_train_state_from_checkpoint(
+                model,
+                train_state_path,
+                optim_getter=lambda p: optax.adam(1e-4),  # dummy or real, won't be used
+                just_params=True,
+                train_state_dtype=params_dtype
+            )
+        else:
+            # C) Neither file
+            raise FileNotFoundError(
+                f"Could not find either 'params.msgpack' or 'train_state.msgpack' in {model_load_path}."
+            )
+
+        # Pad embeddings if needed
         should_pad = (force_pad_embeddings or len(tokenizer) > model.config.vocab_size)
         if should_pad:
             params = freeze(pad_embeddings(unfreeze(params), model, tokenizer, dtype=params_dtype))
-        # shard train_state
-        train_state = shard_train_state_from_params(model, params, optim_getter(params))
+
+        # Create final TrainState using the new optimizer
+        train_state = shard_train_state_from_params(
+            model,
+            params,
+            optim_getter(params)
+        )
     else:
         raise ValueError(f"Invalid model_load_mode: {model_load_mode}")
     
