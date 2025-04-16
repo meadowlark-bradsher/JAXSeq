@@ -148,6 +148,24 @@ def load_train_state(
         # shard train_state
         train_state = shard_train_state_from_params(model, params, optim_getter(params))
     elif ModelLoadMode.match_load_mode(model_load_mode, ModelLoadMode.PARAMS):
+        # ---------------------------------------------------------------------------------------
+        # ### TODO: Finish or remove partial fallback logic
+        #
+        # We added a partial implementation that tries to load just `params` from a `train_state.msgpack`
+        # if `params.msgpack` isn't present. However, if there is a mismatch in optimizer state keys
+        # (e.g. `'opt_state' -> 'mini_step'`), we can still get a KeyError.
+        #
+        # Options to fix this properly:
+        # 1. Patch `shard_train_state_from_checkpoint` (or `load_pytree`) so that, if we're ignoring
+        #    the optimizer, we completely skip loading those keys.
+        # 2. Convert the old checkpoint offline into a `params.msgpack` (params only).
+        # 3. Switch to streaming partial loads (advanced).
+        #
+        # For now, if we run into the `KeyError`, we plan to train a new BC model or manually
+        # convert the checkpoint. Eventually, we should either finalize the partial loader logic
+        # or roll it back to avoid confusion.
+        #
+        # ---------------------------------------------------------------------------------------
         print("Using ModelLoadMode.PARAMS")
 
         params_path = os.path.join(model_load_path, 'params.msgpack')
