@@ -4,7 +4,7 @@ from jax._src.tree_util import KeyPath as KeyPath
 import re
 import numpy as np
 import jax.numpy as jnp
-from typing import List, Tuple
+from typing import List, Tuple, Sequence
 from jax.sharding import Mesh, NamedSharding
 from jaxtyping import PyTree
 from typing import NamedTuple, Any, Union, Optional, Generator, Dict, Iterator, Callable, Iterable
@@ -329,15 +329,37 @@ def jsonl_load(fp: Iterator) -> List[Dict]:
     return list(jsonl_stream(fp))
 
 
-def load_mesh(shape: Tuple[int], axis_names: Tuple[str]) -> Mesh:
-    """load device mesh with data parallel on the first axis and model parallel on the second axis"""
-    assert sum(map(lambda x: int(x == -1), shape)) <= 1, "only one of the mesh dimensions can be -1"
+# def load_mesh(shape: Tuple[int], axis_names: Tuple[str]) -> Mesh:
+#     """load device mesh with data parallel on the first axis and model parallel on the second axis"""
+#     assert sum(map(lambda x: int(x == -1), shape)) <= 1, "only one of the mesh dimensions can be -1"
+#     if -1 in shape:
+#         shape = list(shape)
+#         prod = reduce(lambda a, b: a*b, filter(lambda x: x != -1, shape), 1)
+#         shape[shape.index(-1)] = int(len(jax.devices()) / prod)
+#         shape = tuple(shape)
+#     devices = mesh_utils.create_device_mesh(shape)
+#     return Mesh(devices, axis_names=axis_names)
+
+def load_mesh(
+    shape: Tuple[int, ...],
+    axis_names: Tuple[str, ...],
+    devices: Optional[Sequence[jax.Device]] = None,   # ← NEW
+) -> Mesh:
+    """Create a sharding mesh.  If `devices` is None, take *all* visible devices."""
+    assert sum(x == -1 for x in shape) <= 1, "only one mesh dim can be -1"
+
     if -1 in shape:
+        prod = reduce(lambda a, b: a * b, (x for x in shape if x != -1), 1)
         shape = list(shape)
-        prod = reduce(lambda a, b: a*b, filter(lambda x: x != -1, shape), 1)
-        shape[shape.index(-1)] = int(len(jax.devices()) / prod)
+        shape[shape.index(-1)] = len(jax.devices()) // prod
         shape = tuple(shape)
-    devices = mesh_utils.create_device_mesh(shape)
+
+    if devices is None:
+        devices = mesh_utils.create_device_mesh(shape)
+    else:
+        assert len(devices) == np.prod(shape), "device count ≠ ∏shape"
+        devices = np.array(devices).reshape(shape)
+
     return Mesh(devices, axis_names=axis_names)
 
 def float_to_dtype(tree, dtype=jnp.float32):
