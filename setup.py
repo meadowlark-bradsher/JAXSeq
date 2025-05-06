@@ -12,7 +12,7 @@ def read_requirements_file(filename):
 
 setup(
     name='JaxSeq',
-    version='1.0.2',
+    version='1.0.3',
     description='Implementations of LLM training in JAX.',
     url='https://github.com/Sea-Snell/JaxSeq2',
     author='Charlie Snell',
